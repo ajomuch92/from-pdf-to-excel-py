@@ -6,6 +6,8 @@ import threading
 import time
 import os
 
+from utils import export_orders_to_excel, parse_pdf_orders
+
 
 class App(ttk.Window):
 
@@ -117,16 +119,18 @@ class App(ttk.Window):
         thread.start()
 
     def export(self):
+        try:
+            orders = parse_pdf_orders(self.selected_file)
 
-        # Simulación de procesamiento de páginas
-        for i in range(5):
+            export_orders_to_excel(orders, self.combo.get())          
 
-            if self.cancel_export:
-                return
-
-            time.sleep(1)
-
-        self.after(0, self.export_finished)
+            self.after(0, self.export_finished)
+        except Exception as e:
+            self.after(0, lambda: ttk.dialogs.Messagebox.show_error(
+                f"An error occurred during export: {str(e)}"
+                "Export failed",
+            ))
+            self.after(0, self.reset)
 
     def export_finished(self):
 
