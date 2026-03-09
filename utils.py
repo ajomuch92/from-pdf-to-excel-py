@@ -1,5 +1,7 @@
 from classes import OrderHeader, OrderLine
 import pdfplumber
+import pandas as pd
+from pathlib import Path
 
 
 def split_cell(cell):
@@ -88,9 +90,6 @@ def parse_pdf_orders(pdf_path):
                 orders.append(order)
 
     return orders
-
-import pandas as pd
-from pathlib import Path
 
 MAX_ITEMS = 30
 
