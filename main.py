@@ -1,9 +1,10 @@
+from tkinter import BOTH, DISABLED, NORMAL, W, X
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from tkinter import BOTH, DISABLED, NORMAL, W, X, filedialog
-import os
+from tkinter import filedialog
 import threading
 import time
+import os
 
 
 class App(ttk.Window):
@@ -12,12 +13,14 @@ class App(ttk.Window):
         super().__init__(themename="flatly")
 
         self.title("PDF Exporter")
-        self.geometry("500x300")
+        self.geometry("500x320")
 
-        # deshabilitar maximizar
+        # No maximizar
         self.resizable(False, False)
 
         self.selected_file = None
+        self.export_running = False
+        self.cancel_export = False
 
         self.create_ui()
 
@@ -61,13 +64,23 @@ class App(ttk.Window):
             state=DISABLED
         )
 
-        self.export_btn.pack(fill=X, pady=20)
+        self.export_btn.pack(fill=X, pady=10)
 
-        # loader
+        # RESET SIEMPRE DISPONIBLE
+        self.reset_btn = ttk.Button(
+            container,
+            text="Reset",
+            command=self.reset,
+            bootstyle="warning",
+            state=DISABLED
+        )
+
+        self.reset_btn.pack(fill=X)
+
         self.progress = ttk.Progressbar(
             container,
             mode="indeterminate",
-            bootstyle="success"
+            bootstyle="info"
         )
 
     def enable_file_selector(self, event=None):
@@ -87,8 +100,15 @@ class App(ttk.Window):
 
     def start_export(self):
 
+        if not self.selected_file:
+            return
+
+        self.export_running = True
+        self.cancel_export = False
+
         self.export_btn.config(state=DISABLED)
         self.select_btn.config(state=DISABLED)
+        self.combo.config(state=DISABLED)
 
         self.progress.pack(fill=X, pady=10)
         self.progress.start()
@@ -98,8 +118,13 @@ class App(ttk.Window):
 
     def export(self):
 
-        # simulación del proceso
-        time.sleep(3)
+        # Simulación de procesamiento de páginas
+        for i in range(5):
+
+            if self.cancel_export:
+                return
+
+            time.sleep(1)
 
         self.after(0, self.export_finished)
 
@@ -108,13 +133,34 @@ class App(ttk.Window):
         self.progress.stop()
         self.progress.pack_forget()
 
-        self.export_btn.config(state=NORMAL)
-        self.select_btn.config(state=NORMAL)
+        self.export_running = False
+        self.reset_btn.config(state=NORMAL)
 
         ttk.dialogs.Messagebox.show_info(
             "Export completed",
-            "The PDF was exported successfully"
+            "Export finished successfully"
         )
+
+    def reset(self):
+
+        # Cancelar export si está corriendo
+        if self.export_running:
+            self.cancel_export = True
+
+        self.export_running = False
+        self.selected_file = None
+
+        self.file_label.config(text="No file selected")
+
+        self.doc_type.set("")
+        self.combo.config(state="readonly")
+
+        self.select_btn.config(state=DISABLED)
+        self.export_btn.config(state=DISABLED)
+
+        self.progress.stop()
+        self.progress.pack_forget()
+        self.reset_btn.config(state=DISABLED)
 
 
 if __name__ == "__main__":
