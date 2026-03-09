@@ -16,12 +16,13 @@ class OrderHeader:
 
 
 class OrderLine:
-    def __init__(self, line_id, order_id, product_id, quantity, price, description=""):
+    def __init__(self, line_id, order_id, product_id, quantity, price, activity = "", description=""):
         self.line_id = line_id
         self.order_id = order_id
         self.product_id = product_id
         self.quantity = quantity
         self.price = price
+        self.activity = activity
         self.description = description
 
     def __str__(self):
