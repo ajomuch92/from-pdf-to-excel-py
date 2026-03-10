@@ -51,7 +51,7 @@ def parse_pdf_orders(pdf_path):
                 customer_match = re.search(r'([A-Z ]+\/\d+)', block)
 
                 if customer_match:
-                    customer = customer_match.group(1).strip()
+                    customer = customer_match.group(1).strip().split("/")[0].strip()
 
             order = OrderHeader(order_id, customer, order_date)
 
