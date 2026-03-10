@@ -3,7 +3,6 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from tkinter import filedialog
 import threading
-import time
 import os
 
 from utils import export_orders_to_excel, parse_pdf_orders
@@ -142,7 +141,7 @@ class App(ttk.Window):
 
         ttk.dialogs.Messagebox.show_info(
             "Export completed",
-            "Export finished successfully"
+            "Export finished successfully. The Excel file has been saved to your Downloads folder."
         )
 
     def reset(self):
