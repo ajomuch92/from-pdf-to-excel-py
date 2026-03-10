@@ -2,6 +2,7 @@ from classes import OrderHeader, OrderLine
 import pdfplumber
 import pandas as pd
 from pathlib import Path
+import re
 
 
 def split_cell(cell):
@@ -18,76 +19,81 @@ def parse_pdf_orders(pdf_path):
 
         for page in pdf.pages:
 
-            order_id = None
-            order_date = None
-            customer = None
+            text = page.extract_text()
 
-            tables = page.extract_tables()
+            if not text:
+                continue
 
-            order = None
+            # -----------------------------
+            # INVOICE NUMBER
+            # -----------------------------
+            invoice_match = re.search(r'INVOICE\s+(\d+)', text)
+            order_id = invoice_match.group(1) if invoice_match else None
 
-            for table in tables:
+            # -----------------------------
+            # DATE
+            # -----------------------------
+            date_match = re.search(r'DATE\s+(\d{2}/\d{2}/\d{4})', text)
+            order_date = date_match.group(1) if date_match else None
 
-                header = table[0]
+            # -----------------------------
+            # CUSTOMER (BILL TO)
+            # -----------------------------
+            bill_block = re.search(
+                r'BILLTO.*?\n(.*?)DATE',
+                text,
+                re.S
+            )
 
-                # -----------------------------
-                # BILL TO TABLE
-                # -----------------------------
-                if header and "BILL TO" in header[0]:
+            if bill_block:
+                block = bill_block.group(1)
 
-                    customer_cell = table[1][0]
-                    customer_lines = split_cell(customer_cell)
+                customer_match = re.search(r'([A-Z ]+\/\d+)', block)
 
-                    if customer_lines:
-                        customer = customer_lines[0]
+                if customer_match:
+                    customer = customer_match.group(1).strip()
 
-                # -----------------------------
-                # INVOICE HEADER TABLE
-                # -----------------------------
-                if header and "INVOICE #" in header[0]:
+            order = OrderHeader(order_id, customer, order_date)
 
-                    row = table[1]
+            # -----------------------------
+            # ITEMS SECTION
+            # -----------------------------
+            items_section = re.search(
+                r'ACTIVITY DESCRIPTION QTY RATE AMOUNT(.*?)SUBTOTAL',
+                text,
+                re.S
+            )
 
-                    order_id = row[0]
-                    order_date = row[1]
+            if items_section:
 
-                    order = OrderHeader( order_id, customer, order_date)
+                items_text = items_section.group(1)
 
-                # -----------------------------
-                # ITEMS TABLE
-                # -----------------------------
-                if header and "ACTIVITY" in header[0]:
+                # pattern de linea de producto
+                item_pattern = re.findall(
+                    r'([A-Z0-9\s\-]+?)\s+([A-Z0-9\s\-,]+?)\s+(\d+)\s+([\d\.]+)',
+                    items_text
+                )
 
-                    row = table[1]
+                for i, match in enumerate(item_pattern):
 
-                    activities = split_cell(row[0])
-                    descriptions = split_cell(row[1])
-                    qtys = split_cell(row[2])
-                    rates = split_cell(row[3])
+                    activity = match[0].strip()
+                    description = match[1].strip()
+                    qty = float(match[2])
+                    rate = float(match[3])
 
-                    max_len = max(len(activities), len(qtys))
+                    line = OrderLine(
+                        line_id=i + 1,
+                        order_id=order_id,
+                        product_id=activity,
+                        quantity=qty,
+                        price=rate,
+                        activity=activity,
+                        description=description
+                    )
 
-                    for i in range(max_len):
+                    order.add_line(line)
 
-                        product = activities[i] if i < len(activities) else None
-                        qty = float(qtys[i]) if i < len(qtys) else 0
-                        rate = float(rates[i]) if i < len(rates) else 0
-
-                        line = OrderLine(
-                            line_id=i + 1,
-                            order_id=order_id,
-                            product_id=product,
-                            quantity=qty,
-                            price=rate,
-                            activity=activities[i] if i < len(activities) else "",
-                            description=descriptions[i] if i < len(descriptions) else ""
-                        )
-
-                        if order:
-                            order.add_line(line)
-
-            if order:
-                orders.append(order)
+            orders.append(order)
 
     return orders
 
