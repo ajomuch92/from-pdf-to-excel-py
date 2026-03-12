@@ -10,7 +10,6 @@ def split_cell(cell):
         return []
     return [x.strip() for x in cell.split("\n") if x.strip()]
 
-
 def parse_pdf_orders(pdf_path):
 
     orders = []
@@ -19,81 +18,101 @@ def parse_pdf_orders(pdf_path):
 
         for page in pdf.pages:
 
-            text = page.extract_text()
+            raw_lines = page.extract_text_lines()
 
-            if not text:
+            if not raw_lines:
                 continue
 
-            # -----------------------------
-            # INVOICE NUMBER
-            # -----------------------------
-            invoice_match = re.search(r'INVOICE\s+(\d+)', text)
-            order_id = invoice_match.group(1) if invoice_match else None
+            # convertir a lista de strings
+            lines = [l["text"].strip() for l in raw_lines if l.get("text")]
 
-            # -----------------------------
-            # DATE
-            # -----------------------------
-            date_match = re.search(r'DATE\s+(\d{2}/\d{2}/\d{4})', text)
-            order_date = date_match.group(1) if date_match else None
+            order_id = None
+            order_date = None
+            customer = None
+            order = None
 
-            # -----------------------------
-            # CUSTOMER (BILL TO)
-            # -----------------------------
-            bill_block = re.search(
-                r'BILLTO.*?\n(.*?)DATE',
-                text,
-                re.S
-            )
+            items_section = False
+            line_id = 1
 
-            if bill_block:
-                block = bill_block.group(1)
+            for i, line in enumerate(lines):
+                print(line)
+                print("-" * 40)
+                # -----------------------------
+                # INVOICE NUMBER
+                # -----------------------------
+                invoice_match = re.search(r'INVOICE\s+(\d+)', line)
+                if invoice_match:
+                    order_id = invoice_match.group(1)
 
-                customer_match = re.search(r'([A-Z ]+\/\d+)', block)
+                # -----------------------------
+                # DATE
+                # -----------------------------
+                date_match = re.search(r'DATE\s+(\d{2}/\d{2}/\d{4})', line)
+                if date_match:
+                    order_date = date_match.group(1)
 
-                if customer_match:
-                    customer = customer_match.group(1).strip().split("/")[0].strip()
+                # -----------------------------
+                # CUSTOMER
+                # -----------------------------
+                if "BILLTO" in line.replace(" ", ""):
+                    if i + 1 < len(lines):
 
-            order = OrderHeader(order_id, customer, order_date)
+                        next_line = lines[i + 1]
 
-            # -----------------------------
-            # ITEMS SECTION
-            # -----------------------------
-            items_section = re.search(
-                r'ACTIVITY DESCRIPTION QTY RATE AMOUNT(.*?)SUBTOTAL',
-                text,
-                re.S
-            )
+                        customer_match = re.search(r'([A-Z]+/\d+)', next_line)
 
-            if items_section:
+                        if customer_match:
+                            customer = customer_match.group(1)
 
-                items_text = items_section.group(1)
+                # -----------------------------
+                # START ITEMS
+                # -----------------------------
+                if "ACTIVITY" in line and "QTY" in line:
+                    items_section = True
 
-                # pattern de linea de producto
-                item_pattern = re.findall(
-                    r'([A-Z0-9\s\-]+?)\s+([A-Z0-9\s\-,]+?)\s+(\d+)\s+([\d\.]+)',
-                    items_text
-                )
+                    # crear orden aquí si no existe
+                    if order is None and order_id:
+                        order = OrderHeader(order_id, customer, order_date)
 
-                for i, match in enumerate(item_pattern):
+                    continue
 
-                    activity = match[0].strip()
-                    description = match[1].strip()
-                    qty = float(match[2])
-                    rate = float(match[3])
+                # -----------------------------
+                # ITEMS
+                # -----------------------------
+                if items_section:
 
-                    line = OrderLine(
-                        line_id=i + 1,
-                        order_id=order_id,
-                        product_id=activity,
-                        quantity=qty,
-                        price=rate,
-                        activity=activity,
-                        description=description
+                    if "SUBTOTAL" in line or "TAX" in line:
+                        items_section = False
+                        continue
+
+                    item_match = re.search(
+                        r'(.+?)\s+(\d+)\s+([\d.]+)\s+([\d.]+)',
+                        line
                     )
 
-                    order.add_line(line)
+                    if item_match and order:
 
-            orders.append(order)
+                        activity = item_match.group(1).strip()
+                        qty = float(item_match.group(2))
+                        rate = float(item_match.group(3))
+
+                        line_obj = OrderLine(
+                            line_id=line_id,
+                            order_id=order_id,
+                            product_id=activity,
+                            quantity=qty,
+                            price=rate,
+                            activity=activity,
+                            description=activity
+                        )
+
+                        order.add_line(line_obj)
+
+                        line_id += 1
+
+            # guardar orden
+            if order:
+                orders.append(order)
 
     return orders
 
