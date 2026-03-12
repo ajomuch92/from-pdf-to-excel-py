@@ -82,6 +82,8 @@ def parse_pdf_orders(pdf_path):
                             customer = customer_match.group(1)
                             if "/" in customer:
                                 customer = customer.split("/")[0].strip()
+                        else:
+                            customer = next_line.strip()
 
                 # -----------------------------
                 # CUSTOMER (REFUND)
@@ -89,7 +91,14 @@ def parse_pdf_orders(pdf_path):
                 if "REFUNDTO" in normalized:
                     if i + 1 < len(lines):
                         next_line = lines[i + 1]
-                        customer = next_line.strip()
+                        customer_match = re.search(r'([A-Z]+\s?[A-Z]*\s?/[0-9\-]+)', next_line)
+
+                        if customer_match:
+                            customer = customer_match.group(1)
+                            if "/" in customer:
+                                customer = customer.split("/")[0].strip()
+                        else:
+                            customer = next_line.strip()
 
                 # -----------------------------
                 # START ITEMS
