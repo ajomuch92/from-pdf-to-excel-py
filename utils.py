@@ -159,13 +159,13 @@ def export_orders_to_excel(orders, doc_type):
 
     for order in orders:
 
-        multiplier = -1 if doc_type.lower() == "refund" else 1
+        multiplier = 1 if doc_type.upper() == "INVOICES" else -1
 
         row = {
             "DATE": order.order_date,
-            "INVOICE" if doc_type.upper() == "INVOICE" else "REFUND": order.order_id,
+            "INVOICE" if doc_type.upper() == "INVOICES" else "REFUND": order.order_id,
             "BILL TO": order.customer_id,
-            "TYPE": doc_type
+            # "TYPE": doc_type
         }
 
         for i in range(MAX_ITEMS):
@@ -174,17 +174,17 @@ def export_orders_to_excel(orders, doc_type):
 
                 item = order.lines[i]
 
+                row[f"QTY {i+1}"] = multiplier * item.quantity
                 row[f"ACTIVITY {i+1}"] = item.activity
                 row[f"DESCRIPTION {i+1}"] = item.description
                 row[f"WHOLE PRICE {i+1}"] = ""
                 row[f"RATE {i+1}"] = item.price
-                row[f"QTY {i+1}"] = multiplier * item.quantity
                 row[f"COMPRA {i+1}"] = ""
                 row[f"VENTA {i+1}"] = ""
                 row[f"GANANCIA {i+1}"] = ""
 
             else:
-
+                row[f"QTY {i+1}"] = ""
                 row[f"ACTIVITY {i+1}"] = ""
                 row[f"DESCRIPTION {i+1}"] = ""
                 row[f"WHOLE PRICE {i+1}"] = ""
