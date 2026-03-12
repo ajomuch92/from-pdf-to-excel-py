@@ -23,20 +23,27 @@ def parse_pdf_orders(pdf_path):
             if not raw_lines:
                 continue
 
-            # convertir a lista de strings
             lines = [l["text"].strip() for l in raw_lines if l.get("text")]
 
             order_id = None
             order_date = None
             customer = None
             order = None
+            doc_type = "invoice"
 
             items_section = False
             line_id = 1
 
             for i, line in enumerate(lines):
-                print(line)
-                print("-" * 40)
+
+                normalized = line.upper().replace(" ", "")
+
+                # -----------------------------
+                # DOCUMENT TYPE
+                # -----------------------------
+                if "REFUNDRECEIPT" in normalized:
+                    doc_type = "refund"
+
                 # -----------------------------
                 # INVOICE NUMBER
                 # -----------------------------
@@ -45,32 +52,52 @@ def parse_pdf_orders(pdf_path):
                     order_id = invoice_match.group(1)
 
                 # -----------------------------
+                # REFUND NUMBER
+                # -----------------------------
+                refund_match = re.search(r'REFUND\s+(\d+)', line)
+                if refund_match and "REFUND DATE" not in line:
+                    order_id = refund_match.group(1)
+
+                # -----------------------------
                 # DATE
                 # -----------------------------
                 date_match = re.search(r'DATE\s+(\d{2}/\d{2}/\d{4})', line)
                 if date_match:
                     order_date = date_match.group(1)
 
-                # -----------------------------
-                # CUSTOMER
-                # -----------------------------
-                if "BILLTO" in line.replace(" ", ""):
-                    if i + 1 < len(lines):
+                refund_date_match = re.search(r'REFUND DATE\s+(\d{2}/\d{2}/\d{4})', line)
+                if refund_date_match:
+                    order_date = refund_date_match.group(1)
 
+                # -----------------------------
+                # CUSTOMER (INVOICE)
+                # -----------------------------
+                if "BILLTO" in normalized:
+                    if i + 1 < len(lines):
                         next_line = lines[i + 1]
 
-                        customer_match = re.search(r'([A-Z]+/\d+)', next_line)
+                        customer_match = re.search(r'([A-Z]+\s?[A-Z]*\s?/[0-9\-]+)', next_line)
 
                         if customer_match:
                             customer = customer_match.group(1)
+                            if "/" in customer:
+                                customer = customer.split("/")[0].strip()
+
+                # -----------------------------
+                # CUSTOMER (REFUND)
+                # -----------------------------
+                if "REFUNDTO" in normalized:
+                    if i + 1 < len(lines):
+                        next_line = lines[i + 1]
+                        customer = next_line.strip()
 
                 # -----------------------------
                 # START ITEMS
                 # -----------------------------
                 if "ACTIVITY" in line and "QTY" in line:
+
                     items_section = True
 
-                    # crear orden aquí si no existe
                     if order is None and order_id:
                         order = OrderHeader(order_id, customer, order_date)
 
@@ -81,7 +108,7 @@ def parse_pdf_orders(pdf_path):
                 # -----------------------------
                 if items_section:
 
-                    if "SUBTOTAL" in line or "TAX" in line:
+                    if any(x in line for x in ["SUBTOTAL", "TAX", "TOTAL", "BALANCE"]):
                         items_section = False
                         continue
 
@@ -110,7 +137,6 @@ def parse_pdf_orders(pdf_path):
 
                         line_id += 1
 
-            # guardar orden
             if order:
                 orders.append(order)
 
@@ -128,7 +154,7 @@ def export_orders_to_excel(orders, doc_type):
 
         row = {
             "DATE": order.order_date,
-            "INVOICE": order.order_id,
+            "INVOICE" if doc_type.upper() == "INVOICE" else "REFUND": order.order_id,
             "BILL TO": order.customer_id,
             "TYPE": doc_type
         }
