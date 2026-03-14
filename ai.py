@@ -1,11 +1,10 @@
 from classes import OrderHeader, OrderLine
 import requests
 import json
-from pdf2image import convert_from_path
 import base64
 import io
-import fitz  # pymupdf
 from PIL import Image
+import pypdfium2 as pdfium
 
 def image_to_base64(img):
 
@@ -15,17 +14,17 @@ def image_to_base64(img):
     return base64.b64encode(buffer.getvalue()).decode()
 
 def pdf_to_images(pdf_path):
+
+    pdf = pdfium.PdfDocument(pdf_path)
+
     images = []
 
-    doc = fitz.open(pdf_path)
+    for page in pdf:
 
-    for page in doc:
+        bitmap = page.render(scale=3)
+        pil_image = bitmap.to_pil()
 
-        pix = page.get_pixmap(dpi=300)
-
-        img = Image.open(io.BytesIO(pix.tobytes("png")))
-        images.append(img)
-
+        images.append(pil_image)
 
     return images
 
@@ -85,7 +84,7 @@ def parse_invoice_image(image, api_key):
             "Content-Type": "application/json"
         },
         json={
-            "model": "google/gemma-3-4b-it:free",
+            "model": "google/gemma-3-12b-it:free",
             "messages": [
                 {
                     "role": "user",
@@ -105,6 +104,8 @@ def parse_invoice_image(image, api_key):
     )
 
     result = response.json()
+    if result.get("error") and result["error"].get("message"):
+        raise Exception(result["error"]["message"])
     content = result["choices"][0]["message"]["content"]
 
     content = content.replace('```json', '').replace('```', '').strip()
