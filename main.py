@@ -15,7 +15,7 @@ class App(ttk.Window):
         super().__init__(themename="flatly")
 
         self.title("PDF Exporter")
-        self.geometry("500x360")
+        self.geometry("500x400")
 
         # No maximizar
         self.resizable(False, False)
@@ -93,6 +93,15 @@ class App(ttk.Window):
 
         self.reset_btn.pack(fill=X)
 
+        self.warning_label = ttk.Label(
+            container,
+            text="",
+            bootstyle="danger",
+            justify="center"
+        )
+
+        self.warning_label.pack(pady=10, fill=X)
+
         self.progress = ttk.Progressbar(
             container,
             mode="indeterminate",
@@ -146,6 +155,7 @@ class App(ttk.Window):
         self.export_btn.config(state=DISABLED)
         self.select_btn.config(state=DISABLED)
         self.combo.config(state=DISABLED)
+        self.warning_label.config(text="The export process may take some time depending on the size of the PDF")
 
         self.progress.pack(fill=X, pady=10)
         self.progress.start()
@@ -200,7 +210,8 @@ class App(ttk.Window):
         self.progress.stop()
         self.progress.pack_forget()
         self.reset_btn.config(state=DISABLED)
-        self.api_key.set("")
+        # self.api_key.set("")
+        self.warning_label.config(text="")
         self.update_ui_state()
 
 
