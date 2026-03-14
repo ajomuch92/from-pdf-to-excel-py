@@ -69,7 +69,7 @@ def parse_with_ai(text, api_key):
             "Content-Type": "application/json"
         },
         json={
-            "model": "meta-llama/llama-3.1-8b-instruct",
+            "model": "google/gemma-2-9b-it",
             "messages": [
                 {"role": "system", "content": "You are a helpful assistant that extracts structured data from invoices and refunds."},
                 {"role": "system", "content": "Always respond with JSON in the specified format. Do not include any explanations or text outside the JSON."},
@@ -82,6 +82,8 @@ def parse_with_ai(text, api_key):
     result = response.json()
 
     content = result["choices"][0]["message"]["content"]
+
+    content = content.replace('```json', '').replace('```', '').strip()
 
     return json.loads(content)
 
