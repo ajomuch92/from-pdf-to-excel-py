@@ -27,7 +27,7 @@ def pdf_to_images(pdf_path):
 
     return images
 
-def parse_pdf_orders_ai(pdf_path, api_key):
+def parse_pdf_orders_ai(pdf_path, api_key, model_name):
 
     images = pdf_to_images(pdf_path)
 
@@ -35,7 +35,7 @@ def parse_pdf_orders_ai(pdf_path, api_key):
 
     for img in images:
 
-        data = parse_invoice_image(img, api_key)
+        data = parse_invoice_image(img, api_key, model_name)
 
         order = create_order_from_ai(data)
 
@@ -43,7 +43,13 @@ def parse_pdf_orders_ai(pdf_path, api_key):
 
     return orders
 
-def parse_invoice_image(image, api_key):
+def parse_invoice_image(image, api_key, model_name):
+
+    if not api_key:
+        raise Exception("API key is required")
+    
+    if not model_name:
+        raise Exception("Model selection is required")
 
     image_b64 = image_to_base64(image)
 
@@ -83,7 +89,7 @@ def parse_invoice_image(image, api_key):
             "Content-Type": "application/json"
         },
         json={
-            "model": "google/gemma-3-12b-it:free",
+            "model": model_name,
             "messages": [
                 {
                     "role": "user",
