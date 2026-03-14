@@ -1,30 +1,115 @@
 from classes import OrderHeader, OrderLine
-import pdfplumber
-import pandas as pd
-from pathlib import Path
 import requests
 import json
+from pdf2image import convert_from_path
+import base64
+import io
+import fitz  # pymupdf
+from PIL import Image
+
+def image_to_base64(img):
+
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+
+    return base64.b64encode(buffer.getvalue()).decode()
+
+def pdf_to_images(pdf_path):
+    images = []
+
+    doc = fitz.open(pdf_path)
+
+    for page in doc:
+
+        pix = page.get_pixmap(dpi=300)
+
+        img = Image.open(io.BytesIO(pix.tobytes("png")))
+        images.append(img)
+
+
+    return images
 
 def parse_pdf_orders_ai(pdf_path, api_key):
 
+    images = pdf_to_images(pdf_path)
+
     orders = []
 
-    with pdfplumber.open(pdf_path) as pdf:
+    for img in images:
 
-        for page in pdf.pages:
+        data = parse_invoice_image(img, api_key)
 
-            text = page.extract_text()
+        order = create_order_from_ai(data)
 
-            if not text:
-                continue
-
-            data = parse_with_ai(text, api_key)
-
-            order = create_order_from_ai(data)
-
-            orders.append(order)
+        orders.append(order)
 
     return orders
+
+def parse_invoice_image(image, api_key):
+
+    image_b64 = image_to_base64(image)
+
+    prompt = """
+        Extract structured data from this invoice or refund.
+
+        Return ONLY JSON:
+
+        {
+            "document_type": "invoice | refund",
+            "id": "string",
+            "date": "MM/DD/YYYY",
+            "customer": "string",
+            "lines": [
+                {
+                "activity": "string",
+                "description": "string",
+                "qty": number,
+                "rate": number
+                }
+            ]
+        }
+
+        
+        Rules:
+            - If document says REFUND, set document_type = refund
+            - If document says INVOICE, set document_type = invoice
+            - qty and rate must be numbers
+            - Do not include explanations
+            - Output JSON only
+    """
+
+    response = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        },
+        json={
+            "model": "google/gemma-3-4b-it:free",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/png;base64,{image_b64}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "temperature": 0
+        }
+    )
+
+    result = response.json()
+    content = result["choices"][0]["message"]["content"]
+
+    content = content.replace('```json', '').replace('```', '').strip()
+
+    return json.loads(content)
 
 def parse_with_ai(text, api_key):
 
