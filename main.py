@@ -200,7 +200,7 @@ class App(ttk.Window):
         self.export_running = False
         self.selected_file = None
 
-        self.file_label.config(text="No file selected")
+        self.file_label.config(text="No file selected. Max 10 pages.")
 
         self.doc_type.set("")
         self.combo.config(state="readonly")
