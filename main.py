@@ -165,7 +165,7 @@ class App(ttk.Window):
 
     def export(self):
         try:
-            orders = parse_pdf_orders_ai(self.selected_file, self.api_key.get())
+            orders = parse_pdf_orders_ai(self.selected_file, self.api_key.get().strip())
 
             export_orders_to_excel(orders, self.combo.get())          
 
