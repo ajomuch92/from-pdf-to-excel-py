@@ -5,7 +5,8 @@ from tkinter import filedialog
 import threading
 import os
 
-from utils import export_orders_to_excel, parse_pdf_orders
+from ai import parse_pdf_orders_ai
+from utils import export_orders_to_excel
 
 
 class App(ttk.Window):
@@ -14,7 +15,7 @@ class App(ttk.Window):
         super().__init__(themename="flatly")
 
         self.title("PDF Exporter")
-        self.geometry("500x320")
+        self.geometry("500x360")
 
         # No maximizar
         self.resizable(False, False)
@@ -154,7 +155,7 @@ class App(ttk.Window):
 
     def export(self):
         try:
-            orders = parse_pdf_orders(self.selected_file)
+            orders = parse_pdf_orders_ai(self.selected_file, self.api_key.get())
 
             export_orders_to_excel(orders, self.combo.get())          
 
