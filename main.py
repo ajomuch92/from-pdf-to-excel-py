@@ -8,6 +8,13 @@ import os
 from ai import parse_pdf_orders_ai
 from utils import export_orders_to_excel
 
+available_models = [
+    "nvidia/nemotron-nano-12b-v2-vl:free",
+    "google/gemma-3-4b-it:free",
+    "google/gemma-3-12b-it:free",
+    "google/gemma-3-27b-it:free"
+]
+
 
 class App(ttk.Window):
 
@@ -15,7 +22,7 @@ class App(ttk.Window):
         super().__init__(themename="flatly")
 
         self.title("PDF Exporter")
-        self.geometry("500x400")
+        self.geometry("520x520")
 
         # No maximizar
         self.resizable(False, False)
@@ -58,6 +65,24 @@ class App(ttk.Window):
         self.api_key_entry.pack(fill=X, pady=5)
 
         self.api_key.trace_add("write", self.update_ui_state)
+
+
+        ttk.Label(container, text="Choose your model:").pack(anchor=W)
+        ttk.Label(container, text="- Some models are slower than others.").pack(anchor=W, padx=5)
+        ttk.Label(container, text="- Some models require more resources.").pack(anchor=W, padx=5)
+        ttk.Label(container, text="- Some models have rate limits.").pack(anchor=W, padx=5)
+
+        self.model = ttk.StringVar()
+
+        self.combo_model = ttk.Combobox(
+            container,
+            textvariable=self.model,
+            values=available_models,
+            state="readonly"
+        )
+
+        self.combo_model.pack(fill=X, pady=10)
+        self.combo_model.bind("<<ComboboxSelected>>", self.update_ui_state)
 
         self.file_label = ttk.Label(container, text="No file selected. Max 10 pages.")
         self.file_label.pack(pady=10)
@@ -111,16 +136,17 @@ class App(ttk.Window):
     def update_ui_state(self, *args):
         has_doc_type = bool(self.doc_type.get())
         has_api_key = bool(self.api_key.get().strip())
+        has_model = bool(self.model.get())
         has_file = self.selected_file is not None
 
         # habilitar selector
-        if has_doc_type and has_api_key:
+        if has_doc_type and has_api_key and has_model:
             self.select_btn.config(state=NORMAL)
         else:
             self.select_btn.config(state=DISABLED)
 
         # habilitar export
-        if has_doc_type and has_api_key and has_file:
+        if has_doc_type and has_api_key and has_model and has_file:
             self.export_btn.config(state=NORMAL)
         else:
             self.export_btn.config(state=DISABLED)
@@ -165,17 +191,18 @@ class App(ttk.Window):
 
     def export(self):
         try:
-            orders = parse_pdf_orders_ai(self.selected_file, self.api_key.get().strip())
+            orders = parse_pdf_orders_ai(self.selected_file, self.api_key.get().strip(), self.model.get().strip())
 
             export_orders_to_excel(orders, self.combo.get())          
 
             self.after(0, self.export_finished)
         except Exception as e:
             self.after(0, lambda: ttk.dialogs.Messagebox.show_error(
-                f"An error occurred during export: {str(e)}"
-                "Export failed",
+                f"An error occurred during export: {str(e)}",
+                title="Export failed",
             ))
-            self.after(0, self.reset)
+            self.reset_btn.config(state=NORMAL)
+            self.warning_label.config(text="")
 
     def export_finished(self):
 
