@@ -22,7 +22,7 @@ class App(ttk.Window):
         super().__init__(themename="flatly")
 
         self.title("PDF Exporter")
-        self.geometry("520x520")
+        self.geometry("520x540")
 
         # No maximizar
         self.resizable(False, False)
@@ -133,6 +133,14 @@ class App(ttk.Window):
             bootstyle="info"
         )
 
+        self.status_label = ttk.Label(
+            container,
+            text="",
+            bootstyle="info"
+        )
+        self.status_label.pack(pady=1, fill=X)
+
+
     def update_ui_state(self, *args):
         has_doc_type = bool(self.doc_type.get())
         has_api_key = bool(self.api_key.get().strip())
@@ -191,7 +199,7 @@ class App(ttk.Window):
 
     def export(self):
         try:
-            orders = parse_pdf_orders_ai(self.selected_file, self.api_key.get().strip(), self.model.get().strip())
+            orders = parse_pdf_orders_ai(self.selected_file, self.api_key.get().strip(), self.model.get().strip(), self.status_label)
 
             export_orders_to_excel(orders, self.combo.get())          
 
@@ -217,6 +225,7 @@ class App(ttk.Window):
             "Export completed",
             "Export finished successfully. The Excel file has been saved to your Downloads folder."
         )
+        self.status_label.config(text="Export completed successfully.")
 
     def reset(self):
 
@@ -238,6 +247,7 @@ class App(ttk.Window):
         self.progress.stop()
         self.progress.pack_forget()
         self.reset_btn.config(state=DISABLED)
+        self.status_label.config(text="")
         # self.api_key.set("")
         self.update_ui_state()
 

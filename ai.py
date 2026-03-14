@@ -27,14 +27,15 @@ def pdf_to_images(pdf_path):
 
     return images
 
-def parse_pdf_orders_ai(pdf_path, api_key, model_name):
+def parse_pdf_orders_ai(pdf_path, api_key, model_name, status_label):
 
     images = pdf_to_images(pdf_path)
 
     orders = []
 
-    for img in images:
-
+    for idx, img in enumerate(images):
+        if (status_label):
+            status_label.config(text=f"Processing page {idx + 1} of {len(images)}...")
         data = parse_invoice_image(img, api_key, model_name)
 
         order = create_order_from_ai(data)
