@@ -59,7 +59,7 @@ class App(ttk.Window):
 
         self.api_key.trace_add("write", self.update_ui_state)
 
-        self.file_label = ttk.Label(container, text="No file selected")
+        self.file_label = ttk.Label(container, text="No file selected. Max 10 pages.")
         self.file_label.pack(pady=10)
 
         self.select_btn = ttk.Button(
