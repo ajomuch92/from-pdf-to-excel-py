@@ -184,6 +184,7 @@ class App(ttk.Window):
 
         self.export_running = False
         self.reset_btn.config(state=NORMAL)
+        self.warning_label.config(text="")
 
         ttk.dialogs.Messagebox.show_info(
             "Export completed",
@@ -211,7 +212,6 @@ class App(ttk.Window):
         self.progress.pack_forget()
         self.reset_btn.config(state=DISABLED)
         # self.api_key.set("")
-        self.warning_label.config(text="")
         self.update_ui_state()
 
 
