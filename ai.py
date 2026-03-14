@@ -3,7 +3,6 @@ import requests
 import json
 import base64
 import io
-from PIL import Image
 import pypdfium2 as pdfium
 
 def image_to_base64(img):
