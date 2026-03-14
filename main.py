@@ -42,7 +42,21 @@ class App(ttk.Window):
         )
 
         self.combo.pack(fill=X, pady=10)
-        self.combo.bind("<<ComboboxSelected>>", self.enable_file_selector)
+        self.combo.bind("<<ComboboxSelected>>", self.update_ui_state)
+
+        ttk.Label(container, text="Enter your Open AI API key:").pack(anchor=W, pady=5)
+        self.api_key = ttk.StringVar()
+
+        self.api_key_entry = ttk.Entry(
+            container,
+            textvariable=self.api_key,
+            style="info.TEntry",
+            show="*"
+        )
+
+        self.api_key_entry.pack(fill=X, pady=5)
+
+        self.api_key.trace_add("write", self.update_ui_state)
 
         self.file_label = ttk.Label(container, text="No file selected")
         self.file_label.pack(pady=10)
@@ -84,8 +98,27 @@ class App(ttk.Window):
             bootstyle="info"
         )
 
-    def enable_file_selector(self, event=None):
-        self.select_btn.config(state=NORMAL)
+    def update_ui_state(self, *args):
+        has_doc_type = bool(self.doc_type.get())
+        has_api_key = bool(self.api_key.get().strip())
+        has_file = self.selected_file is not None
+
+        # habilitar selector
+        if has_doc_type and has_api_key:
+            self.select_btn.config(state=NORMAL)
+        else:
+            self.select_btn.config(state=DISABLED)
+
+        # habilitar export
+        if has_doc_type and has_api_key and has_file:
+            self.export_btn.config(state=NORMAL)
+        else:
+            self.export_btn.config(state=DISABLED)
+        
+        if has_api_key:
+            self.api_key_entry.configure(bootstyle="success")
+        else:
+            self.api_key_entry.configure(bootstyle="danger")
 
     def select_file(self):
 
@@ -98,6 +131,8 @@ class App(ttk.Window):
             self.selected_file = file
             self.file_label.config(text=os.path.basename(file))
             self.export_btn.config(state=NORMAL)
+        
+        self.update_ui_state()
 
     def start_export(self):
 
@@ -164,6 +199,8 @@ class App(ttk.Window):
         self.progress.stop()
         self.progress.pack_forget()
         self.reset_btn.config(state=DISABLED)
+        self.api_key.set("")
+        self.update_ui_state()
 
 
 if __name__ == "__main__":
