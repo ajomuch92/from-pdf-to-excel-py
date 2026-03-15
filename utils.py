@@ -4,6 +4,11 @@ import pandas as pd
 from pathlib import Path
 import re
 
+def export_excel_to_dataframe(excel_path):
+
+    df = pd.read_excel(excel_path)
+
+    return df
 
 def split_cell(cell):
     if not cell:
