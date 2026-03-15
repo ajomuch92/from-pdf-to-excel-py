@@ -10,9 +10,13 @@ from utils import export_excel_to_dataframe, export_orders_to_excel, search_prod
 
 available_models = [
     "nvidia/nemotron-nano-12b-v2-vl:free",
+    "nvidia/nemotron-nano-12b-v2-vl",
     "google/gemma-3-4b-it:free",
+    "google/gemma-3-4b-it",
     "google/gemma-3-12b-it:free",
-    "google/gemma-3-27b-it:free"
+    "google/gemma-3-12b-it",
+    "google/gemma-3-27b-it:free",
+    "google/gemma-3-27b-it",
 ]
 
 
@@ -265,7 +269,6 @@ class App(ttk.Window):
             "Export completed",
             "Export finished successfully. The Excel file has been saved to your Downloads folder."
         )
-        self.status_label.config(text="Export completed successfully.")
 
     def reset(self):
         if self.export_running:
