@@ -6,7 +6,7 @@ import threading
 import os
 
 from ai import parse_pdf_orders_ai
-from utils import export_orders_to_excel
+from utils import export_excel_to_dataframe, export_orders_to_excel, search_product
 
 available_models = [
     "nvidia/nemotron-nano-12b-v2-vl:free",
@@ -237,13 +237,14 @@ class App(ttk.Window):
 
     def export(self):
         try:
+            df = export_excel_to_dataframe(self.selected_excel) if self.selected_excel else None
             orders = parse_pdf_orders_ai(
                 self.selected_file,
                 self.api_key.get().strip(),
                 self.model.get().strip(),
                 self.status_label
             )
-            export_orders_to_excel(orders, self.combo.get())
+            export_orders_to_excel(orders, self.combo.get(), df)
             self.after(0, self.export_finished)
         except Exception as e:
             self.after(0, lambda: ttk.dialogs.Messagebox.show_error(
