@@ -3,6 +3,8 @@ import pdfplumber
 import pandas as pd
 from pathlib import Path
 import re
+from rapidfuzz import process, fuzz
+import pandas as pd
 
 def export_excel_to_dataframe(excel_path):
 
@@ -158,7 +160,7 @@ def parse_pdf_orders(pdf_path):
 
 MAX_ITEMS = 30
 
-def export_orders_to_excel(orders, doc_type):
+def export_orders_to_excel(orders, doc_type, df):
 
     rows = []
 
@@ -178,11 +180,15 @@ def export_orders_to_excel(orders, doc_type):
             if i < len(order.lines):
 
                 item = order.lines[i]
+                
+                product_found = search_product(df, item.activity, limit=1, threshold=80) if df is not None else None
+
+                print(f"Searching for '{item.activity}' in product list... Found: {product_found['product'].values[0] if product_found is not None and not product_found.empty else 'No match'}")
 
                 row[f"QTY {i+1}"] = multiplier * item.quantity
-                row[f"ACTIVITY {i+1}"] = item.activity
+                row[f"ACTIVITY {i+1}"] = product_found["product"].values[0] if product_found is not None and not product_found.empty else item.activity
                 row[f"DESCRIPTION {i+1}"] = item.description
-                row[f"WHOLE PRICE {i+1}"] = ""
+                row[f"WHOLE PRICE {i+1}"] = product_found["whole price"].values[0] if product_found is not None and not product_found.empty else ""
                 row[f"RATE {i+1}"] = item.price
                 row[f"COMPRA {i+1}"] = ""
                 row[f"VENTA {i+1}"] = ""
@@ -208,3 +214,24 @@ def export_orders_to_excel(orders, doc_type):
     df.to_excel(file_path, index=False)
 
     return file_path
+
+def search_product(df: pd.DataFrame, query: str, limit: int = 5, threshold: int = 60) -> pd.DataFrame:
+    df = df.copy()
+    df.columns = df.columns.str.lower().str.strip()
+
+    required_columns = {"product", "description", "whole price", "rate"}
+    missing = required_columns - set(df.columns)
+    
+    if missing:
+        raise ValueError(f"Missing columns: {missing}")
+
+    results = process.extract(
+        query,
+        df["product"],
+        scorer=fuzz.WRatio,
+        limit=limit
+    )
+
+    indices = [idx for _, score, idx in results if score >= threshold]
+
+    return df.iloc[indices][["product", "description", "whole price", "rate"]]
