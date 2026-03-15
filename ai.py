@@ -40,16 +40,20 @@ def parse_pdf_orders_ai(pdf_path, api_key, model_name, status_label):
     images = pdf_to_images(pdf_path)
 
     orders = []
-
+    tokens_used = 0
+    total_cost = 0
     for idx, img in enumerate(images):
         if (status_label):
             status_label.config(text=f"Processing page {idx + 1} of {len(images)}...")
-        data = parse_invoice_image(img, api_key, model_name)
+        data, tokens, cost = parse_invoice_image(img, api_key, model_name)
+        tokens_used += tokens
+        total_cost += cost
 
         order = create_order_from_ai(data)
 
         orders.append(order)
 
+    status_label.config(text="Export completed successfully. [Tokens used: " + str(tokens_used) + ", Total cost: $" + str(total_cost) + "]")
     return orders
 
 def parse_invoice_image(image, api_key, model_name):
@@ -88,7 +92,7 @@ def parse_invoice_image(image, api_key, model_name):
             - If document says INVOICE, set document_type = invoice
             - qty and rate must be numbers
             - Do not include explanations
-            - Output JSON only
+            - IMPORTANT: Output JSON ONLY
     """
 
     response = requests.post(
@@ -121,10 +125,11 @@ def parse_invoice_image(image, api_key, model_name):
     if result.get("error") and result["error"].get("message"):
         raise Exception(result["error"]["message"])
     content = result["choices"][0]["message"]["content"]
-
+    total_cost = result["usage"]["cost"]
+    tokens_used = result["usage"]["total_tokens"]
     content = content.replace('```json', '').replace('```', '').strip()
 
-    return json.loads(content)
+    return [json.loads(content), tokens_used, total_cost]
 
 def parse_with_ai(text, api_key):
 
