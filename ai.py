@@ -16,6 +16,14 @@ def pdf_to_images(pdf_path):
 
     pdf = pdfium.PdfDocument(pdf_path)
 
+    num_pages = len(pdf)
+
+    if num_pages == 0:
+        raise Exception("The PDF has no pages")
+    
+    if num_pages > 10:
+        raise Exception("The PDF has too many pages. Please select a PDF with 10 pages or less.")
+
     images = []
 
     for page in pdf:
