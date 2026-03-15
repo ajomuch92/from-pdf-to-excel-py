@@ -183,8 +183,6 @@ def export_orders_to_excel(orders, doc_type, df):
                 
                 product_found = search_product(df, item.activity, limit=1, threshold=80) if df is not None else None
 
-                print(f"Searching for '{item.activity}' in product list... Found: {product_found['product'].values[0] if product_found is not None and not product_found.empty else 'No match'}")
-
                 row[f"QTY {i+1}"] = multiplier * item.quantity
                 row[f"ACTIVITY {i+1}"] = product_found["product"].values[0] if product_found is not None and not product_found.empty else item.activity
                 row[f"DESCRIPTION {i+1}"] = product_found["description"].values[0] if product_found is not None and not product_found.empty else item.description
