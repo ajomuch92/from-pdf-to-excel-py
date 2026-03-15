@@ -187,7 +187,7 @@ def export_orders_to_excel(orders, doc_type, df):
 
                 row[f"QTY {i+1}"] = multiplier * item.quantity
                 row[f"ACTIVITY {i+1}"] = product_found["product"].values[0] if product_found is not None and not product_found.empty else item.activity
-                row[f"DESCRIPTION {i+1}"] = item.description
+                row[f"DESCRIPTION {i+1}"] = product_found["description"].values[0] if product_found is not None and not product_found.empty else item.description
                 row[f"WHOLE PRICE {i+1}"] = product_found["whole price"].values[0] if product_found is not None and not product_found.empty else ""
                 row[f"RATE {i+1}"] = item.price
                 row[f"COMPRA {i+1}"] = ""
